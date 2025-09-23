@@ -12,6 +12,7 @@ import AccountsPage from "@/pages/Accounts";
 import TransactionsPage from "@/pages/Transactions";
 import CategoriesPage from "@/pages/Categories";
 import ProfilePage from "@/pages/Profile";
+import BudgetsPage from "@/pages/Budgets";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/accounts" element={<AccountsPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
               <Route path="/categories" element={<CategoriesPage />} />
+              <Route path="/budgets" element={<BudgetsPage />} />
               <Route path="/profile" element={<ProfilePage />} />
             </Route>
 

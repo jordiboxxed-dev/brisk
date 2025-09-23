@@ -29,3 +29,18 @@ export interface Transaction {
   accounts: { name: string };
   categories: { name: string; icon: string };
 }
+
+export interface Budget {
+  id: string;
+  user_id: string;
+  category_id: string;
+  amount: number;
+  month: string; // date string
+  created_at: string;
+  categories?: { name: string; icon: string };
+}
+
+export interface BudgetWithSpending extends Budget {
+  spent: number;
+  currency: string; // Assuming one currency per budget for simplicity, based on category spending
+}
