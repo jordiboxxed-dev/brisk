@@ -8,6 +8,8 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log("Agent-chat function invoked.");
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -15,13 +17,13 @@ serve(async (req) => {
   try {
     const { messages } = await req.json()
     if (!messages) {
+      console.error("Request failed: No messages provided.");
       return new Response(JSON.stringify({ error: 'No se proporcionaron mensajes' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // Crear un cliente de Supabase autenticado con el token del usuario
     const authHeader = req.headers.get('Authorization')!
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -29,7 +31,6 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    // Obtener el contexto financiero del usuario
     const today = new Date();
     const monthStart = startOfMonth(today);
     const monthEnd = endOfMonth(today);
@@ -60,27 +61,33 @@ serve(async (req) => {
     };
 
     const n8nWebhookUrl = Deno.env.get('N8N_WEBHOOK_URL')
+    console.log("Retrieved N8N_WEBHOOK_URL:", n8nWebhookUrl ? "URL is set" : "URL is NOT SET or empty");
+
     if (!n8nWebhookUrl) {
-      return new Response(JSON.stringify({ error: 'Error de configuración del servidor' }), { status: 500, headers: corsHeaders });
+      console.error("N8N_WEBHOOK_URL secret is not configured.");
+      return new Response(JSON.stringify({ error: 'Error de configuración del servidor: N8N_WEBHOOK_URL no está configurado.' }), { status: 500, headers: corsHeaders });
     }
 
-    // Enviar mensajes y contexto a n8n
+    console.log("Attempting to send request to n8n webhook...");
     const n8nResponse = await fetch(n8nWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messages, context: financialContext }),
     });
+    console.log("n8n response status:", n8nResponse.status);
 
     if (!n8nResponse.ok) {
       const errorBody = await n8nResponse.text();
+      console.error("Error from n8n webhook:", { status: n8nResponse.status, body: errorBody });
       return new Response(JSON.stringify({ error: 'Fallo al obtener respuesta del agente' }), { status: n8nResponse.status, headers: corsHeaders });
     }
 
     const responseData = await n8nResponse.json();
+    console.log("Successfully received response from n8n.");
     return new Response(JSON.stringify(responseData), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    console.error('Error en la función agent-chat:', error);
+    console.error('Critical error in agent-chat function:', error);
     return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 })
