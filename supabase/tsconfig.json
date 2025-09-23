@@ -1,6 +1,9 @@
 {
-  "extends": "../tsconfig.json",
   "compilerOptions": {
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
     "lib": ["esnext", "deno.ns"],
