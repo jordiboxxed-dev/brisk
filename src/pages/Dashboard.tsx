@@ -1,25 +1,12 @@
-import { Button } from "@/components/ui/button"
-import { supabase } from "@/integrations/supabase/client"
-import { useNavigate } from "react-router-dom"
-import { useSession } from "@/contexts/SessionProvider"
-
 const Dashboard = () => {
-  const navigate = useNavigate()
-  const { session } = useSession()
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    navigate('/login')
-  }
-
   return (
-    <div className="p-8">
+    <div>
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <Button onClick={handleLogout}>Cerrar Sesión</Button>
+        {/* Aquí irá el botón para "Añadir Transacción" */}
       </div>
-      <p>Bienvenido, {session?.user?.email}</p>
-      {/* El contenido del dashboard irá aquí */}
+      <p>¡Bienvenido a BRISK! Este es tu panel principal.</p>
+      {/* El contenido del dashboard con las tarjetas y gráficos irá aquí */}
     </div>
   )
 }
