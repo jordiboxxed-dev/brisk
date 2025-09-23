@@ -28,6 +28,17 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
+    // Obtener la información del usuario
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+
+    if (userError || !user) {
+      console.error('Error getting user:', userError);
+      return new Response(JSON.stringify({ error: 'No se pudo autenticar al usuario' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const today = new Date();
     const monthStart = startOfMonth(today);
     const monthEnd = endOfMonth(today);
@@ -50,6 +61,8 @@ serve(async (req) => {
     }
 
     const financialContext = {
+      user_id: user.id,
+      full_name: user.user_metadata.full_name || user.email,
       accounts,
       categories,
       budgets,
@@ -62,9 +75,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Error de configuración del servidor' }), { status: 500, headers: corsHeaders });
     }
 
-    // Añadimos un controlador para el timeout
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000); // Aumentamos el timeout a 60 segundos
+    const timeoutId = setTimeout(() => controller.abort(), 60000);
 
     let n8nResponse;
     try {
@@ -72,10 +84,10 @@ serve(async (req) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages, context: financialContext }),
-        signal: controller.signal, // Asociamos el controlador al fetch
+        signal: controller.signal,
       });
     } finally {
-      clearTimeout(timeoutId); // Limpiamos el timeout si la respuesta llega a tiempo
+      clearTimeout(timeoutId);
     }
 
     if (!n8nResponse.ok) {
