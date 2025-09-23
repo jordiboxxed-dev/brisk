@@ -62,7 +62,6 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
         throw error;
       }
 
-      // Asumimos que n8n devuelve una respuesta con el formato { "reply": "..." }
       const agentResponse: Message = {
         role: 'agent',
         content: data.reply || "Lo siento, no pude procesar tu solicitud.",
@@ -71,10 +70,18 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
 
     } catch (error: any) {
       console.error('Error al llamar la función del agente:', error);
-      showError('Hubo un error al contactar al asistente.');
+      
+      let errorMessage = "Hubo un problema de conexión. Por favor, inténtalo de nuevo.";
+      if (error.message && (error.message.toLowerCase().includes('time') || error.message.toLowerCase().includes('deadline'))) {
+        errorMessage = "El asistente está tardando más de lo normal en responder. Por favor, espera un momento y vuelve a intentarlo más tarde.";
+        showError("La solicitud al asistente ha tardado demasiado.");
+      } else {
+        showError('Hubo un error al contactar al asistente.');
+      }
+
       const errorResponse: Message = {
         role: 'agent',
-        content: "Hubo un problema de conexión. Por favor, inténtalo de nuevo.",
+        content: errorMessage,
       };
       setMessages((prev) => [...prev, errorResponse]);
     } finally {

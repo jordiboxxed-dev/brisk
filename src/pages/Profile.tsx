@@ -32,7 +32,9 @@ const ProfilePage = () => {
       .select('*')
       .eq('id', session.user.id)
       .single();
-    if (error) throw new Error(error.message);
+    if (error && error.code !== 'PGRST116') { // Ignore error for no rows found
+      throw new Error(error.message);
+    }
     return data;
   };
 
@@ -84,24 +86,26 @@ const ProfilePage = () => {
         avatarUrl = urlData.publicUrl;
       }
 
-      const { error: updateError } = await supabase
+      const { error: upsertError } = await supabase
         .from('profiles')
-        .update({
+        .upsert({
+          id: session.user.id,
           full_name: values.full_name,
           avatar_url: avatarUrl,
           updated_at: new Date().toISOString(),
-        })
-        .eq('id', session.user.id);
+        });
 
-      if (updateError) throw updateError;
+      if (upsertError) throw upsertError;
 
       // Update user metadata in auth for immediate UI update
-      await supabase.auth.updateUser({
+      const { error: userUpdateError } = await supabase.auth.updateUser({
         data: {
           full_name: values.full_name,
           avatar_url: avatarUrl,
         }
-      })
+      });
+
+      if (userUpdateError) throw userUpdateError;
 
       showSuccess('Perfil actualizado correctamente.');
       queryClient.invalidateQueries({ queryKey: ['profile', session.user.id] });
