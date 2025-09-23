@@ -21,7 +21,6 @@ serve(async (req) => {
       })
     }
 
-    // Crear un cliente de Supabase autenticado con el token del usuario
     const authHeader = req.headers.get('Authorization')!
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -29,7 +28,6 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
-    // Obtener el contexto financiero del usuario
     const today = new Date();
     const monthStart = startOfMonth(today);
     const monthEnd = endOfMonth(today);
@@ -64,15 +62,25 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Error de configuración del servidor' }), { status: 500, headers: corsHeaders });
     }
 
-    // Enviar mensajes y contexto a n8n
-    const n8nResponse = await fetch(n8nWebhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, context: financialContext }),
-    });
+    // Añadimos un controlador para el timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // Aumentamos el timeout a 60 segundos
+
+    let n8nResponse;
+    try {
+      n8nResponse = await fetch(n8nWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages, context: financialContext }),
+        signal: controller.signal, // Asociamos el controlador al fetch
+      });
+    } finally {
+      clearTimeout(timeoutId); // Limpiamos el timeout si la respuesta llega a tiempo
+    }
 
     if (!n8nResponse.ok) {
       const errorBody = await n8nResponse.text();
+      console.error("Error from n8n:", errorBody);
       return new Response(JSON.stringify({ error: 'Fallo al obtener respuesta del agente' }), { status: n8nResponse.status, headers: corsHeaders });
     }
 
@@ -81,6 +89,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error en la función agent-chat:', error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    const errorMessage = error.name === 'AbortError' ? 'La solicitud al agente ha tardado demasiado (timeout).' : error.message;
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 })
