@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useSession } from '@/contexts/SessionProvider';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, LogOut, Wallet, ArrowRightLeft, Tags } from 'lucide-react';
+import { LayoutDashboard, LogOut, Wallet, ArrowRightLeft, Tags, User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const Sidebar = () => {
@@ -46,6 +46,10 @@ const Sidebar = () => {
           <Tags className="w-5 h-5 mr-3" />
           Categorías
         </NavLink>
+        <NavLink to="/profile" className={navLinkClasses}>
+          <User className="w-5 h-5 mr-3" />
+          Perfil
+        </NavLink>
       </nav>
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center mb-4">
@@ -55,7 +59,7 @@ const Sidebar = () => {
           </Avatar>
           <div className="flex-1 overflow-hidden">
             <p className="text-sm font-medium text-gray-900 dark:text-white truncate" title={user?.email}>
-              {user?.email}
+              {user?.user_metadata?.full_name || user?.email}
             </p>
           </div>
         </div>
