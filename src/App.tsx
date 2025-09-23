@@ -10,6 +10,7 @@ import NotFound from "@/pages/NotFound";
 import AppLayout from "@/components/layout/AppLayout";
 import AccountsPage from "@/pages/Accounts";
 import TransactionsPage from "@/pages/Transactions";
+import CategoriesPage from "@/pages/Categories";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/accounts" element={<AccountsPage />} />
               <Route path="/transactions" element={<TransactionsPage />} />
+              <Route path="/categories" element={<CategoriesPage />} />
             </Route>
 
             {/* AÑADE TODAS LAS RUTAS PERSONALIZADAS ENCIMA DE LA RUTA CATCH-ALL "*" */}

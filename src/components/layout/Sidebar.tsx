@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useSession } from '@/contexts/SessionProvider';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, LogOut, Wallet, ArrowRightLeft } from 'lucide-react';
+import { LayoutDashboard, LogOut, Wallet, ArrowRightLeft, Tags } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const Sidebar = () => {
@@ -41,6 +41,10 @@ const Sidebar = () => {
         <NavLink to="/transactions" className={navLinkClasses}>
           <ArrowRightLeft className="w-5 h-5 mr-3" />
           Transacciones
+        </NavLink>
+        <NavLink to="/categories" className={navLinkClasses}>
+          <Tags className="w-5 h-5 mr-3" />
+          Categorías
         </NavLink>
       </nav>
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
