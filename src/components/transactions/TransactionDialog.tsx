@@ -13,6 +13,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -44,7 +45,7 @@ interface TransactionDialogProps {
 }
 
 const formSchema = z.object({
-  description: z.string().min(1, 'La descripción es requerida.'),
+  description: z.string().min(1, 'La descripción/notas es requerida.'),
   amount: z.coerce.number().positive('El monto debe ser positivo.'),
   type: z.enum(['income', 'expense'], { required_error: 'El tipo es requerido.' }),
   account_id: z.string({ required_error: 'La cuenta es requerida.' }),
@@ -151,9 +152,9 @@ const TransactionDialog = ({ isOpen, onClose, onSuccess, transaction }: Transact
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descripción</FormLabel>
+                  <FormLabel>Notas / Descripción</FormLabel>
                   <FormControl>
-                    <Input placeholder="Ej: Supermercado, Sueldo" {...field} />
+                    <Textarea placeholder="Ej: Cliente, detalle de la compra, etc." {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

@@ -79,9 +79,9 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
 
   if (transactions.length === 0) {
     return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">No tienes ninguna transacción todavía.</p>
-        <p className="text-gray-500">¡Añade una para empezar!</p>
+      <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border">
+        <p className="text-gray-500">No se encontraron transacciones con los filtros actuales.</p>
+        <p className="text-gray-500">¡Intenta ajustar tu búsqueda o añade una nueva transacción!</p>
       </div>
     );
   }
@@ -92,7 +92,7 @@ const TransactionsList = ({ transactions }: TransactionsListProps) => {
         <TableHeader>
           <TableRow>
             <TableHead>Fecha</TableHead>
-            <TableHead>Descripción</TableHead>
+            <TableHead>Notas / Descripción</TableHead>
             <TableHead>Categoría</TableHead>
             <TableHead>Cuenta</TableHead>
             <TableHead className="text-right">Monto</TableHead>
