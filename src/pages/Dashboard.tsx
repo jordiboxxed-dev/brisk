@@ -5,6 +5,7 @@ import BalanceSummary from '@/components/dashboard/BalanceSummary';
 import CategoryChart from '@/components/dashboard/CategoryChart';
 import RecentTransactions from '@/components/dashboard/RecentTransactions';
 import { Skeleton } from '@/components/ui/skeleton';
+import IncomeExpenseChart from '@/components/dashboard/IncomeExpenseChart';
 
 const Dashboard = () => {
   const fetchDashboardData = async () => {
@@ -41,9 +42,12 @@ const Dashboard = () => {
           <Skeleton className="h-28" />
           <Skeleton className="h-28" />
         </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <Skeleton className="h-80" />
-          <Skeleton className="h-80" />
+        <div className="space-y-6">
+          <Skeleton className="h-[400px] w-full" />
+          <div className="grid gap-6 md:grid-cols-5">
+            <div className="md:col-span-2"><Skeleton className="h-96 w-full" /></div>
+            <div className="md:col-span-3"><Skeleton className="h-96 w-full" /></div>
+          </div>
         </div>
       </div>
     );
@@ -61,12 +65,15 @@ const Dashboard = () => {
         <BalanceSummary accounts={data?.accounts || []} />
       </div>
 
-      <div className="grid gap-6 md:grid-cols-5">
-        <div className="md:col-span-2">
-          <CategoryChart transactions={data?.transactions || []} />
-        </div>
-        <div className="md:col-span-3">
-          <RecentTransactions transactions={data?.transactions || []} />
+      <div className="space-y-6">
+        <IncomeExpenseChart transactions={data?.transactions || []} />
+        <div className="grid gap-6 md:grid-cols-5">
+          <div className="md:col-span-2">
+            <CategoryChart transactions={data?.transactions || []} />
+          </div>
+          <div className="md:col-span-3">
+            <RecentTransactions transactions={data?.transactions || []} />
+          </div>
         </div>
       </div>
     </div>
