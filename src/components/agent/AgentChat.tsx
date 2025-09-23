@@ -10,9 +10,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Send, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { showError } from '@/utils/toast';
 
 interface AgentChatProps {
   isOpen: boolean;
@@ -41,25 +43,43 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
     }
   }, [messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = { role: 'user', content: input };
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
-    // --- Simulación de la llamada a n8n y respuesta del LLM ---
-    setTimeout(() => {
+    try {
+      const { data, error } = await supabase.functions.invoke('agent-chat', {
+        body: { messages: newMessages },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      // Asumimos que n8n devuelve una respuesta con el formato { "reply": "..." }
       const agentResponse: Message = {
         role: 'agent',
-        content: "Esta es una respuesta simulada. En la siguiente fase, me conectaré a la base de datos para darte información real sobre tus finanzas.",
+        content: data.reply || "Lo siento, no pude procesar tu solicitud.",
       };
       setMessages((prev) => [...prev, agentResponse]);
+
+    } catch (error: any) {
+      console.error('Error al llamar la función del agente:', error);
+      showError('Hubo un error al contactar al asistente.');
+      const errorResponse: Message = {
+        role: 'agent',
+        content: "Hubo un problema de conexión. Por favor, inténtalo de nuevo.",
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
-    // --- Fin de la simulación ---
+    }
   };
 
   return (
