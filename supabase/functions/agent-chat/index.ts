@@ -31,6 +31,26 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
 
+    // Obtener datos del usuario
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      console.error('Error fetching user:', userError);
+      return new Response(JSON.stringify({ error: 'No se pudo autenticar al usuario' }), { status: 401, headers: corsHeaders });
+    }
+
+    const { data: profile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single();
+
+    const userData = {
+      id: user.id,
+      email: user.email,
+      full_name: profile?.full_name || '',
+    };
+
+    // Obtener contexto financiero
     const today = new Date();
     const monthStart = startOfMonth(today);
     const monthEnd = endOfMonth(today);
@@ -61,20 +81,16 @@ serve(async (req) => {
     };
 
     const n8nWebhookUrl = Deno.env.get('N8N_WEBHOOK_URL')
-    console.log("Retrieved N8N_WEBHOOK_URL:", n8nWebhookUrl ? "URL is set" : "URL is NOT SET or empty");
-
     if (!n8nWebhookUrl) {
       console.error("N8N_WEBHOOK_URL secret is not configured.");
       return new Response(JSON.stringify({ error: 'Error de configuración del servidor: N8N_WEBHOOK_URL no está configurado.' }), { status: 500, headers: corsHeaders });
     }
 
-    console.log("Attempting to send request to n8n webhook...");
     const n8nResponse = await fetch(n8nWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages, context: financialContext }),
+      body: JSON.stringify({ messages, context: financialContext, user: userData }),
     });
-    console.log("n8n response status:", n8nResponse.status);
 
     if (!n8nResponse.ok) {
       const errorBody = await n8nResponse.text();
@@ -83,7 +99,6 @@ serve(async (req) => {
     }
 
     const responseData = await n8nResponse.json();
-    console.log("Successfully received response from n8n.");
     return new Response(JSON.stringify(responseData), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
   } catch (error) {
