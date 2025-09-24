@@ -15,6 +15,8 @@ import { Send, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { showError } from '@/utils/toast';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface AgentChatProps {
   isOpen: boolean;
@@ -68,7 +70,7 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xeXBoc2FsZ21ndG5pcHh0YnlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzOTI5MTAsImV4cCI6MjA3Mzk2ODkxMH0._nLAJNiDRDYVm-7np8K0gW0EeEhCXue7y_Hgcj8pEFI',
+            'apikey': 'eyJhbGciOiJIUzIñiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xeXBoc2FsZ21ndG5pcHh0YnlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzOTI5MTAsImV4cCI6MjA3Mzk2ODkxMH0._nLAJNiDRDYVm-7np8K0gW0EeEhCXue7y_Hgcj8pEFI',
           },
           body: JSON.stringify({ messages: newMessages }),
         }
@@ -90,8 +92,6 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
         fullResponse += decoder.decode(value, { stream: true });
         
         try {
-          // Intenta parsear la respuesta completa en cada chunk.
-          // Esto maneja el caso donde la respuesta completa llega en un solo chunk.
           const parsed = JSON.parse(fullResponse);
           if (parsed.output) {
             setMessages((prev) => {
@@ -104,8 +104,7 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
             });
           }
         } catch (e) {
-          // Si no se puede parsear, es probable que la respuesta esté incompleta.
-          // No hacemos nada y esperamos al siguiente chunk.
+          // Incomplete JSON, wait for more chunks
         }
       }
 
@@ -163,7 +162,19 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
                       : 'bg-muted'
                   )}
                 >
-                  {message.content}
+                  {message.role === 'agent' ? (
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      className="prose prose-sm dark:prose-invert max-w-none"
+                      components={{
+                        p: ({node, ...props}) => <p className="my-0" {...props} />,
+                      }}
+                    >
+                      {message.content}
+                    </ReactMarkdown>
+                  ) : (
+                    message.content
+                  )}
                 </div>
               </div>
             ))}
