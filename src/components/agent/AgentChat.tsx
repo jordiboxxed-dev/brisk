@@ -53,7 +53,6 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
     setInput('');
     setIsLoading(true);
 
-    // Add a placeholder for the agent's response
     setMessages((prev) => [...prev, { role: 'agent', content: '' }]);
 
     try {
@@ -69,7 +68,6 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${session.access_token}`,
-            // This is the public anon key, it's safe to have it here.
             'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xeXBoc2FsZ21ndG5pcHh0YnlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzOTI5MTAsImV4cCI6MjA3Mzk2ODkxMH0._nLAJNiDRDYVm-7np8K0gW0EeEhCXue7y_Hgcj8pEFI',
           },
           body: JSON.stringify({ messages: newMessages }),
@@ -84,20 +82,31 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let done = false;
+      let fullResponse = '';
 
       while (!done) {
         const { value, done: readerDone } = await reader.read();
         done = readerDone;
-        const chunk = decoder.decode(value, { stream: true });
+        fullResponse += decoder.decode(value, { stream: true });
         
-        setMessages((prev) => {
-          const lastMessage = prev[prev.length - 1];
-          if (lastMessage && lastMessage.role === 'agent') {
-            const updatedMessage = { ...lastMessage, content: lastMessage.content + chunk };
-            return [...prev.slice(0, -1), updatedMessage];
+        try {
+          // Intenta parsear la respuesta completa en cada chunk.
+          // Esto maneja el caso donde la respuesta completa llega en un solo chunk.
+          const parsed = JSON.parse(fullResponse);
+          if (parsed.output) {
+            setMessages((prev) => {
+              const lastMessage = prev[prev.length - 1];
+              if (lastMessage && lastMessage.role === 'agent') {
+                const updatedMessage = { ...lastMessage, content: parsed.output };
+                return [...prev.slice(0, -1), updatedMessage];
+              }
+              return prev;
+            });
           }
-          return prev;
-        });
+        } catch (e) {
+          // Si no se puede parsear, es probable que la respuesta esté incompleta.
+          // No hacemos nada y esperamos al siguiente chunk.
+        }
       }
 
     } catch (error: any) {
@@ -108,8 +117,7 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
       setMessages((prev) => {
         const lastMessage = prev[prev.length - 1];
         if (lastMessage && lastMessage.role === 'agent' && lastMessage.content === '') {
-          const updatedMessage = { ...lastMessage, content: errorMessage };
-          return [...prev.slice(0, -1), updatedMessage];
+          return [...prev.slice(0, -1), { role: 'agent', content: errorMessage }];
         }
         return [...prev, { role: 'agent', content: errorMessage }];
       });
@@ -159,7 +167,7 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
                 </div>
               </div>
             ))}
-            {isLoading && (
+            {isLoading && messages[messages.length - 1]?.content === '' && (
                <div className="flex items-start gap-3 justify-start">
                   <Avatar className="h-8 w-8">
                     <AvatarFallback className="bg-primary text-primary-foreground">
