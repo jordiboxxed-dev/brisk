@@ -159,13 +159,13 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
                     'max-w-xs rounded-lg px-4 py-2 text-sm',
                     message.role === 'user'
                       ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
+                      : 'bg-muted',
+                    message.role === 'agent' && 'prose prose-sm dark:prose-invert max-w-none'
                   )}
                 >
                   {message.role === 'agent' ? (
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
-                      className="prose prose-sm dark:prose-invert max-w-none"
                       components={{
                         p: ({node, ...props}) => <p className="my-0" {...props} />,
                       }}
