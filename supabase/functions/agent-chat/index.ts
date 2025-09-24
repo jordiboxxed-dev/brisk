@@ -1,3 +1,5 @@
+/// <reference path="../../globals.d.ts" />
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { startOfMonth, endOfMonth, formatISO } from "https://esm.sh/date-fns@2.30.0";
@@ -45,7 +47,7 @@ serve(async (req) => {
     const accountsPromise = supabaseClient.from('accounts').select('name, currency, balance');
     const categoriesPromise = supabaseClient.from('categories').select('name');
     const budgetsPromise = supabaseClient.from('budgets').select('*, categories(name)').eq('month', formatISO(monthStart, { representation: 'date' }));
-    const transactionsPromise = supabaseClient.from('transactions').select('description, amount, type, currency, date, categories(name)').gte('date', monthStart.toISOString()).lte('date', monthEnd.toISOString()).limit(50);
+    const transactionsPromise = supabaseClient.from('transactions').select('amount, type, currency, categories(name)').gte('date', monthStart.toISOString()).lte('date', monthEnd.toISOString());
 
     const [
       { data: accounts, error: accountsError },
@@ -59,13 +61,52 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Error al obtener el contexto financiero' }), { status: 500, headers: corsHeaders });
     }
 
+    // --- Start of Financial Summary Calculation ---
+    const financialSummary = (transactions || []).reduce((acc, tx) => {
+      const currency = tx.currency || 'unknown';
+      if (!acc[currency]) {
+        acc[currency] = {
+          total_income: 0,
+          total_expense: 0,
+          transaction_count: 0,
+          spending_by_category: {},
+        };
+      }
+
+      acc[currency].transaction_count++;
+      if (tx.type === 'income') {
+        acc[currency].total_income += tx.amount;
+      } else {
+        acc[currency].total_expense += tx.amount;
+        const categoryName = tx.categories?.name || 'Sin Categoría';
+        acc[currency].spending_by_category[categoryName] = (acc[currency].spending_by_category[categoryName] || 0) + tx.amount;
+      }
+
+      return acc;
+    }, {} as any);
+
+    // Process summary to get top categories and net savings
+    for (const currency in financialSummary) {
+      const summary = financialSummary[currency];
+      summary.net_savings = summary.total_income - summary.total_expense;
+      
+      const top_spending_categories = Object.entries(summary.spending_by_category)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, 5)
+        .map(([name, amount]) => ({ name, amount }));
+
+      summary.top_spending_categories = top_spending_categories;
+      delete summary.spending_by_category; // Clean up intermediate data
+    }
+    // --- End of Financial Summary Calculation ---
+
     const financialContext = {
       user_id: user.id,
       full_name: user.user_metadata.full_name || user.email,
       accounts,
       categories,
       budgets,
-      transactions,
+      financial_summary: financialSummary, // Use the summary instead of raw transactions
       current_date: today.toISOString(),
     };
 
@@ -86,8 +127,6 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Fallo al obtener respuesta del agente' }), { status: n8nResponse.status, headers: corsHeaders });
     }
 
-    // Stream the response from n8n back to the client.
-    // This avoids the edge function timeout for long-running agent responses.
     return new Response(n8nResponse.body, {
       headers: {
         ...corsHeaders,
