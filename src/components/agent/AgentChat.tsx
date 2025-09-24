@@ -53,37 +53,66 @@ const AgentChat = ({ isOpen, onClose }: AgentChatProps) => {
     setInput('');
     setIsLoading(true);
 
-    try {
-      const { data, error } = await supabase.functions.invoke('agent-chat', {
-        body: { messages: newMessages },
-      });
+    // Add a placeholder for the agent's response
+    setMessages((prev) => [...prev, { role: 'agent', content: '' }]);
 
-      if (error) {
-        throw error;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("No autenticado. Por favor, inicia sesión de nuevo.");
       }
 
-      const agentResponse: Message = {
-        role: 'agent',
-        content: data.reply || "Lo siento, no pude procesar tu solicitud.",
-      };
-      setMessages((prev) => [...prev, agentResponse]);
+      const response = await fetch(
+        'https://oqyphsalgmgtnipxtbyr.supabase.co/functions/v1/agent-chat',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            // This is the public anon key, it's safe to have it here.
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xeXBoc2FsZ21ndG5pcHh0YnlyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgzOTI5MTAsImV4cCI6MjA3Mzk2ODkxMH0._nLAJNiDRDYVm-7np8K0gW0EeEhCXue7y_Hgcj8pEFI',
+          },
+          body: JSON.stringify({ messages: newMessages }),
+        }
+      );
+
+      if (!response.ok || !response.body) {
+        const errorData = await response.json().catch(() => ({ error: 'Error desconocido del servidor.' }));
+        throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        const chunk = decoder.decode(value, { stream: true });
+        
+        setMessages((prev) => {
+          const lastMessage = prev[prev.length - 1];
+          if (lastMessage && lastMessage.role === 'agent') {
+            const updatedMessage = { ...lastMessage, content: lastMessage.content + chunk };
+            return [...prev.slice(0, -1), updatedMessage];
+          }
+          return prev;
+        });
+      }
 
     } catch (error: any) {
       console.error('Error al llamar la función del agente:', error);
+      const errorMessage = error.message || 'Hubo un problema de conexión. Por favor, inténtalo de nuevo.';
+      showError(errorMessage);
       
-      let errorMessage = "Hubo un problema de conexión. Por favor, inténtalo de nuevo.";
-      if (error.message && (error.message.toLowerCase().includes('time') || error.message.toLowerCase().includes('deadline'))) {
-        errorMessage = "El asistente está tardando más de lo normal en responder. Por favor, espera un momento y vuelve a intentarlo más tarde.";
-        showError("La solicitud al asistente ha tardado demasiado.");
-      } else {
-        showError('Hubo un error al contactar al asistente.');
-      }
-
-      const errorResponse: Message = {
-        role: 'agent',
-        content: errorMessage,
-      };
-      setMessages((prev) => [...prev, errorResponse]);
+      setMessages((prev) => {
+        const lastMessage = prev[prev.length - 1];
+        if (lastMessage && lastMessage.role === 'agent' && lastMessage.content === '') {
+          const updatedMessage = { ...lastMessage, content: errorMessage };
+          return [...prev.slice(0, -1), updatedMessage];
+        }
+        return [...prev, { role: 'agent', content: errorMessage }];
+      });
     } finally {
       setIsLoading(false);
     }
